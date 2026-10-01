@@ -1,0 +1,8 @@
+cff-version: 1.2.0
+title: PhytoSpectra-VLM
+message: Please cite the accompanying paper and this software release.
+type: software
+version: 3.0.0
+authors:
+  - name: PhytoSpectra authors
+license: MIT

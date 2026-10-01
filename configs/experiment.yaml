@@ -1,0 +1,117 @@
+project:
+  name: PhytoSpectra-VLM
+  dataset: HyperLeaf2024
+  input_shape_hwc: [48, 352, 204]
+  targets: [GrainWeight, Gsw, PhiPS2, Fertilizer, Cultivar]
+
+protocol:
+  frozen_recipe: historical_stage42d_exact
+  name: image-wise ID-CV 3-seed x 5-fold
+  seeds: [2026, 2027, 2028]
+  folds: 5
+  split_seed: 2026
+  independent_unit: image
+  outer_fold_used_for_selection: false
+
+preprocessing:
+  dtype: uint16
+  unit_scale_divisor: 65535.0
+  mask_support_threshold: 0.75
+  min_component_size: 20
+  fill_holes: true
+  normalization: per-band foreground z-score fitted on outer-training images
+
+model:
+  phytocore_parameters: 1998346
+  spectral_tokens: 50
+  spatial_tokens: 132
+  hidden_dimension: 128
+  language_model: Qwen/Qwen2.5-1.5B-Instruct
+  language_dimension: 1536
+  visual_prefix_tokens: 16
+  lora_rank: 8
+  lora_alpha: 16
+  lora_dropout: 0.05
+  interpolation_alpha: 0.60
+
+training:
+  phytocore:
+    epochs: 50
+    batch_size: 16
+    workers: 0
+    learning_rate: 3.0e-4
+    minimum_learning_rate: 1.0e-6
+    weight_decay: 1.0e-4
+    gradient_clip_norm: 1.0
+    log_every: 10
+  vlm:
+    alignment_images: 144
+    dev_images: 16
+    epochs: 3
+    max_optimizer_steps: 768
+    warmup_epochs: 3
+    warmup_steps_per_epoch: 20
+    warmup_accumulation: 8
+    bridge_learning_rate: 1.0e-4
+    lora_learning_rate: 5.0e-5
+    weight_decay: 1.0e-4
+    gradient_accumulation_steps: 16
+    gradient_clip_norm: 1.0
+    ema_decay: 0.995
+    max_sequence_tokens: 1024
+    max_question_tokens: 96
+    local_files_only: true
+  remediation:
+    epochs: 2
+    bridge_learning_rate: 5.0e-5
+    lora_learning_rate: 2.0e-5
+    gradient_accumulation_steps: 16
+    class_token_weight: 6.0
+    ema_decay: 0.995
+  cultivar_ranking:
+    epochs: 1
+    bridge_learning_rate: 2.0e-5
+    lora_learning_rate: 1.0e-5
+    gradient_accumulation_steps: 8
+    class_token_weight: 8.0
+    ranking_weight: 0.10
+    ranking_temperature: 1.0
+    ema_decay: 0.99
+  contract_optimization:
+    single_target_epochs: 1
+    joint_epochs: 2
+    gradient_accumulation_steps: 16
+    bridge_learning_rate: 2.0e-5
+    lora_learning_rate: 1.0e-5
+    weight_decay: 1.0e-4
+    ema_decay: 0.995
+    reference_token_weight: 3.0
+    class_token_weight: 10.0
+    hard_label_multiplier: 1.5
+    ranking_weight: 0.15
+    ranking_temperature: 1.0
+    summary_repeat: 3
+    inner_calibration_images: 8
+    inner_selection_images: 8
+    nbest_k: 4
+    gradient_clip_norm: 1.0
+    log_every: 10
+    save_every: 25
+
+evidence:
+  method: four_fixed_candidate_grouped_spatial_token_zeroing
+  candidate_seed: 403026
+  candidate_count: 4
+  candidate_width: 64
+  candidate_height: 16
+  candidate_stride_x: 16
+  candidate_stride_y: 8
+  minimum_foreground_fraction: 0.05
+  variant_batch_size: 4
+
+evaluation:
+  batch_size: 16
+  max_new_tokens: 384
+  bootstrap_resamples: 10000
+  permutations: 20000
+  ablations: [global_only, local_only, no_question_conditioning]

@@ -1,0 +1,86 @@
+class QueryRouter:
+
+
+    def route(
+        self,
+        question:str,
+        image_available:bool=False
+    ):
+
+        q = question.lower()
+
+
+        # Image question
+        if image_available and any(
+            x in q
+            for x in [
+                "image",
+                "picture",
+                "show",
+                "describe",
+                "tell me about",
+                "details"
+            ]
+        ):
+
+            return {
+
+                "intent":
+                "IMAGE_DESCRIPTION",
+
+                "target":
+                None,
+
+                "action":
+                "VISION",
+
+                "knowledge":
+                ""
+            }
+
+
+
+        # Phenotype prediction
+
+        for pheno in [
+            "gsw",
+            "phips2",
+            "grainweight",
+            "cultivar"
+        ]:
+
+            if pheno in q:
+
+                return {
+
+                    "intent":
+                    "PREDICTION",
+
+                    "target":
+                    pheno,
+
+                    "action":
+                    "PREDICT",
+
+                    "knowledge":
+                    ""
+                }
+
+
+
+        # General knowledge
+
+        return {
+
+            "intent":
+            "GENERAL_KNOWLEDGE",
+
+            "target":
+            None,
+
+            "action":
+            "KNOWLEDGE",
+
+            "knowledge":
+            ""
+        }

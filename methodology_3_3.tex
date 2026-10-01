@@ -1,0 +1,156 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb}
+
+\begin{document}
+% Standalone preview of manuscript Section 3.3. In the full manuscript,
+% copy the content from \subsection through the last paragraph; the journal
+% class will number the equations automatically.
+\setcounter{section}{3}
+\setcounter{subsection}{2}
+
+\subsection{Hyperspectral preprocessing}
+
+\subsubsection{Cube Canonicalisation and Leaf Masking}
+The TIFF cubes were loaded in the order height $\times$ width $\times$ band
+($48 \times 352 \times 204$). When required, band-first arrays were reordered
+to this convention, and no spatial resizing was applied to the global cubes at this stage. The stored unsigned
+16-bit intensity values were scaled to the range $[0,1]$ as defined in
+Eq.~\eqref{eq:normalization}:
+
+\begin{equation}
+U_i(p,b)=\frac{X_i(p,b)}{65{,}535},
+\label{eq:normalization}
+\end{equation}
+
+where $X_i$ denotes the stored hyperspectral cube of image $i$, $U_i$ represents
+the corresponding unit-scaled cube, $p$ indicates a spatial pixel location, and
+$b$ denotes the spectral band index. A deterministic foreground mask was then
+generated directly from the spectral measurements. A pixel was assigned to the
+foreground when at least 75\% of its 204 spectral bands contained non-zero
+intensity values, as specified in Eq.~\eqref{eq:foreground_mask}:
+
+\begin{equation}
+M_i^{(0)}(p)=
+\mathbf{1}
+\left[
+\frac{1}{204}
+\sum_{b=1}^{204}
+\mathbf{1}\{U_i(p,b)>0\}
+\geq 0.75
+\right],
+\label{eq:foreground_mask}
+\end{equation}
+
+where $M_i^{(0)}$ represents the initial mask before post-processing. Connected
+components containing fewer than 20 pixels were removed, and holes within the
+remaining components were subsequently filled. Pixels outside the final leaf
+mask were assigned zero intensity. The mask was derived solely from the hyperspectral measurements and did not use prediction targets or
+manually annotated segmentation masks.
+
+\subsubsection{Fold-specific normalisation}
+For each spectral band, the mean and standard deviation were calculated only
+from the pooled foreground pixels in the 1,272 outer-training images. Each
+foreground pixel was normalised by subtracting the corresponding band mean and
+dividing by its standard deviation for that fold. Background pixels remained
+zero after normalisation. The fold-specific statistics and transformation are
+defined in Eq.~\eqref{eq:spectral_standardization}.
+
+\begin{equation}
+\begin{aligned}
+N_f
+&=
+\sum_{i\in\mathcal{T}_f}\sum_p M_i(p),
+\\[4pt]
+\mu_{f,b}
+&=
+\frac{1}{N_f}
+\sum_{i\in\mathcal{T}_f}\sum_p
+M_i(p)U_i(p,b),
+\\[4pt]
+\sigma_{f,b}
+&=
+\sqrt{
+\max\left(
+\frac{1}{N_f}
+\sum_{i\in\mathcal{T}_f}\sum_p
+M_i(p)
+\left(U_i(p,b)-\mu_{f,b}\right)^2,
+10^{-12}
+\right)
+},
+\\[4pt]
+\widetilde{U}_{i,f}(p,b)
+&=
+M_i(p)
+\frac{U_i(p,b)-\mu_{f,b}}
+{\sigma_{f,b}} .
+\end{aligned}
+\label{eq:spectral_standardization}
+\end{equation}
+
+Here, $\mathcal{T}_f$ is the outer-training set for fold $f$, $M_i$ is the
+final leaf mask, and $N_f$ is the total number of foreground pixels used to
+estimate the band statistics for that fold. The three continuous targets were
+also standardised separately using the means and population standard deviations
+calculated from the same outer-training partition. Before evaluation and
+reporting, the predicted values were transformed back to their original
+scales, as shown in Eq.~\eqref{eq:target_standardization}.
+
+\begin{equation}
+\begin{aligned}
+n_f
+&=
+|\mathcal{T}_f|
+=
+1{,}272,
+\\[4pt]
+\mu_{f,t}
+&=
+\frac{1}{n_f}
+\sum_{i\in\mathcal{T}_f}
+y_{i,t},
+\\[4pt]
+s_{f,t}
+&=
+\sqrt{
+\frac{1}{n_f}
+\sum_{i\in\mathcal{T}_f}
+\left(y_{i,t}-\mu_{f,t}\right)^2
+},
+\\[4pt]
+z_{i,t}
+&=
+\frac{y_{i,t}-\mu_{f,t}}
+{s_{f,t}},
+\qquad
+\widehat{y}_{i,t}
+=
+\mu_{f,t}
++
+s_{f,t}\widehat{z}_{i,t}.
+\end{aligned}
+\label{eq:target_standardization}
+\end{equation}
+
+Here, $t$ denotes one of the three continuous targets, and
+$\widehat{z}_{i,t}$ represents its prediction on the standardised scale.
+
+\subsubsection{Training augmentation}
+Data augmentation was performed exclusively during PhytoCore training, following
+a fixed sequence: multiplicative intensity gain, additive Gaussian noise,
+smooth spectral jitter, and spatial translation. Intensity gain was applied
+with a probability of 0.5, using a factor sampled from the range
+$[0.98,1.02]$. If more than 5\% of foreground spectral values were already
+saturated at 1.0, the upper bound was reduced to 1.0. Gaussian noise was
+applied with probability 0.5, with its standard deviation sampled from
+$[0,0.002]$. Spectral jitter was applied with probability 0.35. A random
+band-wise curve was smoothed with a Gaussian filter ($\sigma=8$ bands),
+centred and standardised, then scaled by an amplitude sampled from
+$[0,0.01]$. The resulting multiplicative factors were clipped to
+$[0.95,1.05]$. Translation was applied with probability 0.5, with maximum
+displacements of eight pixels horizontally and two pixels vertically;
+allowable shifts were further limited to keep the leaf within the image.
+Intensities were clipped to $[0,1]$, and background pixels were reset to zero
+before fold-specific normalisation.
+
+\end{document}

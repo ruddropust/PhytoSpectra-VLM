@@ -1,0 +1,112 @@
+"""
+PhytoChat Query Intent Classifier
+"""
+
+
+import re
+
+
+def classify_intent(question: str):
+
+    q = question.lower().strip()
+
+
+    # ----------------------------------
+    # Unsupported scientific requests
+    # ----------------------------------
+
+    unsupported_keywords = [
+        "calcium concentration",
+        "nitrogen concentration",
+        "disease diagnosis",
+        "diagnose disease",
+        "stomatal density",
+        "chlorophyll content"
+    ]
+
+
+    for k in unsupported_keywords:
+        if k in q:
+            return "UNSUPPORTED"
+
+
+
+    # ----------------------------------
+    # Evidence request
+    # ----------------------------------
+
+    evidence_words = [
+        "where",
+        "region",
+        "location",
+        "highlight",
+        "show area",
+        "mark",
+        "zoom",
+        "spectral evidence"
+    ]
+
+
+    if any(w in q for w in evidence_words):
+        return "EVIDENCE"
+
+
+
+    # ----------------------------------
+    # Prediction request
+    # ----------------------------------
+
+    prediction_words = [
+        "value",
+        "predict",
+        "estimate",
+        "calculate",
+        "how much",
+        "what is the value"
+    ]
+
+
+    if any(w in q for w in prediction_words):
+        return "PREDICTION"
+
+
+
+    # ----------------------------------
+    # Image description
+    # ----------------------------------
+
+    image_words = [
+        "describe",
+        "tell me about this leaf",
+        "what do you see",
+        "what can you say about this image",
+        "overview",
+        "unusual"
+    ]
+
+
+    if any(w in q for w in image_words):
+        return "IMAGE_DESCRIPTION"
+
+
+
+    # ----------------------------------
+    # General knowledge
+    # ----------------------------------
+
+    general_words = [
+        "what is",
+        "what are",
+        "meaning",
+        "explain",
+        "define",
+        "tell me about"
+    ]
+
+
+    if any(w in q for w in general_words):
+        return "GENERAL_KNOWLEDGE"
+
+
+
+    return "GENERAL_KNOWLEDGE"
